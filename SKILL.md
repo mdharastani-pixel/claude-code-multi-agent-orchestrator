@@ -23,8 +23,8 @@ Local rules on model choice or the number of parallel agents (CLAUDE.md, other s
 The phases always run in this order. None is skipped; a small task just passes through them faster.
 
 1. **State**: goal and acceptance checks in one to three sentences. Look at the real state (files, tests), do not assume it from notes.
-2. **Do it or delegate**: up to about three tool calls, or when the brief would be longer than the work: do it yourself, no agent.
-3. **Plan**: parts with their own result and their own files, numbered and ordered in waves. First whatever blocks others (bugs, missing foundations), then the rest. No two agents write to the same file.
+2. **Do it or delegate**: up to about three tool calls, or when the brief would be longer than the work: do it yourself, no agent. Every agent start costs a fixed base of tokens (system context, reading in); delegating pays off only when the work would otherwise fill the conductor's context or can run in parallel.
+3. **Plan**: parts with their own result and their own files, numbered and ordered in waves. First whatever blocks others (bugs, missing foundations), then the rest. Split mixed parts by kind of work (research first, then building), not by topic. No two agents write to the same file.
 4. **Cast**: per part a name, a provisional tier from the table, `model` always set, a brief built from the block below.
 5. **Run in waves**: start all parts of a wave in one message (at most four at once). The next wave starts only after the previous one is evaluated: read the self-assessment, restart on `ESCALATE`, decide or ask the user on `CLARIFY`.
 6. **Verify**: tests, sources, an independent reviewer for hard parts. Defects go back to phase 5 as a new wave.
@@ -43,7 +43,7 @@ Show the user the plan in short form before phase 5 (wave, agent, part, model) a
 | 7 to 10 | hard | `opus` |
 | `opus` demonstrably failed, or the core of the whole task | top | `fable` |
 
-Always the cheapest model that reliably reaches the quality. "Important" or "urgent" does not raise the tier. Consequences of an error = 2 (money, customer data, production, irreversible): at least `sonnet` plus an independent review. If a part fits two tiers: split it, so the expensive piece stays small.
+Always the cheapest model that reliably reaches the quality. "Important" or "urgent" does not raise the tier. Consequences of an error = 2 (money, customer data, production, irreversible): at least `sonnet` plus an independent review. If a part fits two tiers: split it, so the expensive piece stays small. If a model is not available: take the next available one below it and say so once in the report. Ask the user before starting a `fable` agent.
 
 Conductor on Fable 5.2 or Opus 5.5: the main session is the most expensive tier. It plans, writes briefs, decides and spot-checks; reading, searching, counting and executing a finished plan are delegated. `fable` as an agent is the exception, not a replacement for `opus`. If `fable` is not available in the account, the ladder ends at `opus` and the conductor takes over above it.
 
@@ -80,9 +80,10 @@ and list them under "Side finding".
 Your answer always starts with:
 ASSESSMENT: <five scores> = <sum> -> needed: <model>; I run on: <model>
 STATUS: DONE | ESCALATE | CLARIFY
-DONE: result, changed files, how verified (command + output), side finding.
-ESCALATE: goal, findings (file:line), attempts so far and their outcome,
-open points, requested model and the reason in one sentence.
+DONE: result, changed files, how verified (command + output), what is only assumed
+and not verified, side finding.
+ESCALATE: goal, findings (file:line), what was tried and why it failed,
+possible directions, open points, requested model and the reason in one sentence.
 CLARIFY: the two requirements (file:line), what each choice means, your recommendation.
 Answer briefly: result and evidence only, no file contents, no retelling of the brief.
 ```
@@ -92,10 +93,15 @@ Answer briefly: result and evidence only, no file contents, no retelling of the 
 - **Agent reports ESCALATE**: start a new agent on the requested model, at most one tier above the need per step. The brief carries the ESCALATE block as handover, so nothing is read twice. If the first agent left files half changed: settle the state first.
 - **Agent reports CLARIFY**: a contradiction in the requirements needs a decision, not a stronger model. The conductor decides or asks the user; the decision goes into the next brief.
 - **Cross-check an escalation**: if the reported score does not fit the part (say, high "consequences" for a pure description), do not start higher; sharpen the brief instead.
-- **At most two escalations** per part. After that the conductor takes over or asks the user. Never repeat the same brief unchanged on the same model.
+- **At most two escalations** per part. If the higher tier fails too, the part is usually cut wrong, not the model too weak: split it again. After that the conductor takes over or asks the user. Never repeat the same brief unchanged on the same model.
+- **Finished agents get no new task.** `SendMessage` only for unfinished or missing things. A message reaches a running agent only when it pauses: everything it needs belongs in the first brief.
 - **ASSESSMENT line missing**: ask for just that line via `SendMessage`, do not restart.
 - **Agent reports a lower tier**: let it finish, do not restart. Lower the tier for the next similar parts.
 - The report says "restarted on `opus`", never "switched model".
+
+## Long tasks: state in a file
+
+With more than two waves, or when the work may outlive a session, the conductor keeps a state file `.orchestra/<task>.md` in the project: goal and acceptance checks, plan with waves, per part the agent, model and status, decisions from CLARIFY, escalations. It updates the file after every wave. After an interruption or context compaction it reads this file first and continues from there. Agents write large results to files and report only the path.
 
 ## Saving tokens
 
@@ -107,7 +113,7 @@ Answer briefly: result and evidence only, no file contents, no retelling of the 
 
 ## Verification
 
-A self-assessment or "DONE" is not proof. The conductor runs the tests, reads the output or checks sources itself. For hard or high-consequence parts an **independent agent** reviews (freshly started, not the author, at least `sonnet`): it gets the goal, the acceptance checks and the result, not the author's reasoning, and is told to attack assumptions and hunt for failure cases.
+A self-assessment or "DONE" is not proof. The conductor runs the tests, reads the output or checks sources itself. It compares the changed files with the allowed ones (in Git: `git diff --name-only`). For hard or high-consequence parts an **independent agent** reviews (freshly started, not the author, at least `sonnet`): it gets the goal, the acceptance checks and the result, not the author's reasoning, and is told to attack assumptions and hunt for failure cases.
 
 ## Report
 

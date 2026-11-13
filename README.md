@@ -66,6 +66,12 @@ Or just say it: "use an agent team for this", "arbeite mit mehreren Agenten".
 
 **6. Token rules.** The conductor does not read what an agent can read. Briefs name paths instead of pasting contents. Restarts happen only on escalation, never to downgrade. At most two escalations per part.
 
+**7. Long tasks survive.** With more than two waves the conductor keeps a small state file in `.orchestra/`, so work continues after an interruption or context compaction.
+
+### When it does not save tokens
+
+Every agent start has a fixed cost: it loads the system context and reads in again. For a job of two or three tool calls the conductor is cheaper on its own, and the skill tells it so. Delegation pays off when the work would otherwise fill the main context or can run in parallel.
+
 ## Tested
 
 Run with Claude Code 2.1.323, conductor on Fable 5.2, on a small invoice library with planted bugs.
@@ -77,7 +83,16 @@ Run with Claude Code 2.1.323, conductor on Fable 5.2, on a small invoice library
 | Hard, started too low on purpose | `haiku` agent scored 7, changed nothing, returned a handover; restarted on `opus`, all tests green |
 | Independent review | `sonnet` reviewer recomputed 3,000 random invoices, found the math correct and one missing test |
 
-Testing also found weak spots in the first draft (an agent escalating over bugs outside its part, a missing assessment line). Both are fixed in the brief block. The orchestra names and the fixed phase order were added after these runs.
+| English brief | `haiku` agent returned `ESCALATE` in the right format and changed nothing |
+| Real use | three named research agents in one wave on `sonnet`, all reported an assessment and finished without escalation |
+
+Testing also found weak spots in the first draft (an agent escalating over bugs outside its part, a missing assessment line). Both are fixed in the brief block. Self-assessments vary by about one point between runs, which is why the check is a separate step.
+
+Reproduce it: see [`tests/`](tests/). A static check runs in CI on every push.
+
+## Credits
+
+Several rules were sharpened after reading how other projects handle the same problem: [AqueGen/model-routing](https://github.com/AqueGen/model-routing) (handover with "what was tried and why it failed", finished agents take no new task), [dsifry/metaswarm](https://github.com/dsifry/metaswarm) (clarify is a stop, not an escalation; file scope check), [ahnafthaqeef/orchestrate-claude-skill](https://github.com/ahnafthaqeef/orchestrate-claude-skill) (fallback when a model is unavailable, ask before the most expensive tier), [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) and [Ibrahim-3d/orchestrator-supaconductor](https://github.com/Ibrahim-3d/orchestrator-supaconductor) (state file for long tasks). What none of them has, as far as their core files show: the agent itself rates its part and reports the model it needs.
 
 ## Limits
 
@@ -85,11 +100,12 @@ Testing also found weak spots in the first draft (an agent escalating over bugs 
 - `SendMessage` continues an agent on the same model.
 - `subagent_type: "fork"` inherits the main model and ignores `model`.
 - Only Claude models. The skill does not call other providers.
+- Nothing is enforced by hooks. The rules are instructions; the one hard lever is the `model` value in the agent call.
 - The self-assessment is a signal, not proof. That is why the check is a separate step.
 
 ## Safety
 
-The skill is plain instructions in one Markdown file. No scripts, no network calls, no credentials, no telemetry. Read it before you install it; it takes two minutes.
+The skill you install is plain instructions in one Markdown file. No scripts, no network calls, no credentials, no telemetry, no update check. The `tests/` folder is not installed. Read it before you install it; it takes two minutes.
 
 ## Keywords
 

@@ -23,8 +23,8 @@ Lokale Regeln zu Modellwahl oder Zahl paralleler Agenten (CLAUDE.md, andere Skil
 Die Phasen laufen immer in dieser Folge. Keine Phase wird übersprungen, eine kleine Aufgabe durchläuft sie nur kürzer.
 
 1. **Lage**: Ziel und Prüfkriterien in ein bis drei Sätzen. Den echten Stand nachsehen (Dateien, Tests), nicht aus Notizen annehmen.
-2. **Selbst oder verteilen**: Bis etwa drei Werkzeug-Aufrufe, oder wenn der Auftrag länger wäre als die Arbeit: selbst erledigen, kein Agent.
-3. **Plan**: Teilaufgaben mit eigenem Ergebnis und eigenen Dateien, nummeriert und in Wellen geordnet. Zuerst, was andere blockiert (Fehler, fehlende Grundlage), dann der Rest. Keine zwei Agenten schreiben in dieselbe Datei.
+2. **Selbst oder verteilen**: Bis etwa drei Werkzeug-Aufrufe, oder wenn der Auftrag länger wäre als die Arbeit: selbst erledigen, kein Agent. Jeder Agent-Start kostet einen festen Sockel an Token (Systemkontext, Einlesen); Verteilen lohnt nur, wenn die Arbeit sonst den Kontext des Dirigenten füllen würde oder parallel laufen kann.
+3. **Plan**: Teilaufgaben mit eigenem Ergebnis und eigenen Dateien, nummeriert und in Wellen geordnet. Zuerst, was andere blockiert (Fehler, fehlende Grundlage), dann der Rest. Gemischte Teile nach Art der Arbeit trennen (erst Recherche, dann Umsetzung), nicht nach Thema. Keine zwei Agenten schreiben in dieselbe Datei.
 4. **Besetzung**: je Teil Name, vorläufige Stufe aus der Tabelle, `model` immer gesetzt, Auftrag mit dem Baustein unten.
 5. **Ausführen in Wellen**: Alle Teile einer Welle in einer Nachricht starten (höchstens vier gleichzeitig). Die nächste Welle startet erst, wenn die vorige ausgewertet ist: Selbsteinschätzung lesen, `ESKALATION` neu starten, `KLÄRUNG` entscheiden oder Nutzer fragen.
 6. **Prüfen**: Tests, Quellen, bei schweren Teilen unabhängiger Prüfer. Mängel gehen als neue Welle zurück in Phase 5.
@@ -43,7 +43,7 @@ Je Kriterium 0 bis 2 Punkte: Umfang und Komplexität, Unsicherheit und fehlender
 | 7 bis 10 | schwer | `opus` |
 | `opus` nachweislich gescheitert, oder der Kern der ganzen Aufgabe | Spitze | `fable` |
 
-Immer das günstigste Modell, das die Qualität sicher schafft. „Wichtig“ oder „eilig“ hebt die Stufe nicht. Folgen eines Fehlers = 2 (Geld, Kundendaten, Produktion, nicht umkehrbar): mindestens `sonnet` und unabhängige Prüfung. Passt ein Teil in zwei Stufen: zerlegen, der teure Teil bleibt klein.
+Immer das günstigste Modell, das die Qualität sicher schafft. „Wichtig“ oder „eilig“ hebt die Stufe nicht. Folgen eines Fehlers = 2 (Geld, Kundendaten, Produktion, nicht umkehrbar): mindestens `sonnet` und unabhängige Prüfung. Passt ein Teil in zwei Stufen: zerlegen, der teure Teil bleibt klein. Ist ein Modell nicht verfügbar: nächstes verfügbares darunter nehmen und es einmal im Bericht sagen. Vor einem `fable`-Agenten den Nutzer fragen.
 
 Dirigent auf Fable 5.2 oder Opus 5.5: Die Hauptsitzung ist die teuerste Stufe. Sie plant, schreibt Aufträge, entscheidet und prüft Stichproben; Lesen, Suchen, Zählen und Umsetzen nach Plan gibt sie ab. `fable` als Agent ist die Ausnahme, nicht der Ersatz für `opus`. Ist `fable` im Konto nicht verfügbar, endet die Leiter bei `opus`, darüber übernimmt der Dirigent selbst.
 
@@ -80,9 +80,10 @@ und nenne sie unter "Nebenbefund".
 Deine Antwort beginnt immer mit:
 EINSCHÄTZUNG: <fünf Punktwerte> = <Summe> -> nötig: <Modell>; ich laufe auf: <Modell>
 STATUS: FERTIG | ESKALATION | KLÄRUNG
-FERTIG: Ergebnis, geänderte Dateien, wie geprüft (Befehl + Ausgabe), Nebenbefund.
-ESKALATION: Ziel, Erkenntnisse (Datei:Zeile), bisherige Versuche und ihr Ergebnis,
-offene Punkte, gewünschtes Modell und Grund in einem Satz.
+FERTIG: Ergebnis, geänderte Dateien, wie geprüft (Befehl + Ausgabe), was nur angenommen
+und nicht geprüft ist, Nebenbefund.
+ESKALATION: Ziel, Erkenntnisse (Datei:Zeile), was versucht wurde und warum es scheiterte,
+mögliche Richtungen, offene Punkte, gewünschtes Modell und Grund in einem Satz.
 KLÄRUNG: die zwei Vorgaben (Datei:Zeile), was jede Wahl bedeutet, deine Empfehlung.
 Antworte knapp: nur Ergebnis und Belege, keine Datei-Inhalte, kein Nacherzählen des Auftrags.
 ```
@@ -92,10 +93,15 @@ Antworte knapp: nur Ergebnis und Belege, keine Datei-Inhalte, kein Nacherzählen
 - **Agent meldet ESKALATION**: neuen Agenten auf dem gewünschten Modell starten, höchstens eine Stufe pro Schritt über dem Bedarf. Der Auftrag enthält den ESKALATION-Block als Übergabe, damit nichts doppelt gelesen wird. Hat der erste Agent Dateien halb geändert: erst Stand klären.
 - **Agent meldet KLÄRUNG**: Ein Widerspruch in den Vorgaben braucht eine Entscheidung, kein stärkeres Modell. Der Dirigent entscheidet oder fragt den Nutzer; die Entscheidung geht in den nächsten Auftrag.
 - **Eskalation gegenprüfen**: Passt die gemeldete Punktsumme nicht zur Teilaufgabe (etwa hohe „Folgen“ bei reiner Beschreibung), startet der Dirigent nicht höher, sondern schärft den Auftrag.
-- **Höchstens zwei Eskalationen** je Teilaufgabe. Danach übernimmt der Dirigent selbst oder fragt den Nutzer. Nie denselben Auftrag unverändert auf demselben Modell wiederholen.
+- **Höchstens zwei Eskalationen** je Teilaufgabe. Scheitert auch die höhere Stufe, ist der Teil meist falsch zugeschnitten, nicht das Modell zu schwach: neu zerlegen. Danach übernimmt der Dirigent selbst oder fragt den Nutzer. Nie denselben Auftrag unverändert auf demselben Modell wiederholen.
+- **Fertige Agenten bekommen keine neue Aufgabe.** `SendMessage` nur für Unfertiges oder Fehlendes. Eine Nachricht erreicht einen laufenden Agenten erst, wenn er pausiert: alles Nötige gehört in den ersten Auftrag.
 - **Zeile EINSCHÄTZUNG fehlt**: per `SendMessage` nur diese Zeile nachfordern, nicht neu starten.
 - **Agent meldet eine niedrigere Stufe**: weiterlaufen lassen, nicht neu starten. Für die nächsten ähnlichen Teile die Stufe senken.
 - Im Bericht steht „neu gestartet auf `opus`“, nie „Modell gewechselt“.
+
+## Lange Aufgaben: Stand in einer Datei
+
+Bei mehr als zwei Wellen, oder wenn die Arbeit eine Sitzung überdauern kann, führt der Dirigent eine Stand-Datei `.orchestra/<aufgabe>.md` im Projekt: Ziel und Prüfkriterien, Plan mit Wellen, je Teil Agent, Modell und Status, Entscheidungen aus KLÄRUNG, Eskalationen. Er aktualisiert sie nach jeder Welle. Nach einer Unterbrechung oder Kontext-Kürzung liest er zuerst diese Datei und setzt dort fort. Große Ergebnisse schreiben Agenten in Dateien und melden nur den Pfad.
 
 ## Token sparen
 
@@ -107,7 +113,7 @@ Antworte knapp: nur Ergebnis und Belege, keine Datei-Inhalte, kein Nacherzählen
 
 ## Prüfung
 
-Eine Selbsteinschätzung oder „FERTIG“ ist kein Nachweis. Der Dirigent lässt Tests laufen, liest die Ausgabe oder prüft Quellen selbst nach. Bei schweren oder folgenreichen Teilen prüft ein **unabhängiger Agent** (neu gestartet, nicht der Autor, mindestens `sonnet`): Er bekommt Ziel, Prüfkriterien und das Ergebnis, nicht die Begründung des Autors, und soll Annahmen angreifen und Fehlerfälle suchen.
+Eine Selbsteinschätzung oder „FERTIG“ ist kein Nachweis. Der Dirigent lässt Tests laufen, liest die Ausgabe oder prüft Quellen selbst nach. Er vergleicht die geänderten Dateien mit den erlaubten (in Git: `git diff --name-only`). Bei schweren oder folgenreichen Teilen prüft ein **unabhängiger Agent** (neu gestartet, nicht der Autor, mindestens `sonnet`): Er bekommt Ziel, Prüfkriterien und das Ergebnis, nicht die Begründung des Autors, und soll Annahmen angreifen und Fehlerfälle suchen.
 
 ## Bericht
 
