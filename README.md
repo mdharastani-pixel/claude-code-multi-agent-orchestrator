@@ -1,4 +1,4 @@
-# adaptive-multi-agent
+# Claude Code Multi-Agent Orchestrator (adaptive-multi-agent)
 
 **Save tokens. Maximize results.** A Claude Code skill that turns your main session into a conductor: it splits the task, hands each part to a named subagent, and puts every part on the cheapest model that does it reliably (Haiku, Sonnet, Opus or Fable).
 
@@ -29,7 +29,7 @@ Goal: ... Findings: billing.py:6 round() on binary floats ... Attempts: none, no
 
 ```bash
 mkdir -p ~/.claude/skills/adaptive-multi-agent
-curl -fsSL https://raw.githubusercontent.com/mdharastani-pixel/adaptive-multi-agent/main/SKILL.md \
+curl -fsSL https://raw.githubusercontent.com/mdharastani-pixel/claude-code-multi-agent-orchestrator/main/SKILL.md \
   -o ~/.claude/skills/adaptive-multi-agent/SKILL.md
 ```
 
