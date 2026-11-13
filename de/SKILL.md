@@ -1,6 +1,6 @@
 ---
 name: adaptive-multi-agent
-description: Use when a task has several separable parts, when the user asks for multiple agents, an agent team, "mehrere Agenten", parallel work or specialised subagents, when subagents should rate their own difficulty and pick or change their model, or when a subagent reports that its part is harder than expected, keeps failing, needs a stronger model, when any subagent is about to be started, when routine work (reading, searching, counting, executing a finished plan) is about to run in the main session or on the largest model, or when the user wants to save tokens.
+description: Use when a task has several separable parts, when the user asks for multiple agents, an agent team, "mehrere Agenten" or parallel work, when any subagent is about to be started, when routine work would run on the largest model, when a subagent says its part needs a stronger model, or when the user wants to save tokens.
 ---
 
 # Adaptive Multi-Agent
@@ -10,6 +10,12 @@ Ziel: Token sparen und Ergebnisse maximieren. Jede Teilarbeit läuft auf dem gü
 Wie ein Orchester: Der Nutzer spricht nur mit dem Dirigenten (Hauptsitzung auf Fable 5.2 oder Opus 5.5). Der Dirigent zerlegt, verteilt, integriert und prüft; die Arbeit spielen die Agenten. Über das Modell stimmen sich beide ab: Der Dirigent schlägt eine Stufe vor, der Agent schätzt seine Teilaufgabe selbst ein und meldet die passende Stufe zurück, der Dirigent setzt sie um. Das Modell setzen kann nur der Dirigent, und nur beim Start eines Agenten.
 
 Lokale Regeln zu Modellwahl oder Zahl paralleler Agenten (CLAUDE.md, andere Skills) gehen vor. Liegt neben dieser Datei eine `local.md`, lies sie zuerst: Ihre Regeln gelten zusätzlich und gehen vor.
+
+## Kurzweg
+
+1. Kleine Aufgabe (etwa drei Werkzeug-Aufrufe): selbst erledigen, kein Agent.
+2. Sonst: in Teile mit getrennten Dateien zerlegen, jedem Agenten Namen, `model` und den Auftrags-Baustein geben.
+3. Jede EINSCHÄTZUNG lesen, nur bei ESKALATION neu starten, prüfen, berichten, wer worauf lief.
 
 ## Was technisch gilt (Claude Code, geprüft mit 2.1.323)
 
@@ -31,6 +37,21 @@ Die Phasen laufen immer in dieser Folge. Keine Phase wird übersprungen, eine kl
 7. **Bericht**: Ergebnisse zusammenführen, Widersprüche selbst klären, Tabelle mit Agent und Modell.
 
 Dem Nutzer vor Phase 5 den Plan in Kurzform zeigen (Welle, Agent, Teilaufgabe, Modell) und ohne Rückfrage starten, außer ein Schritt ist nicht umkehrbar.
+
+## Beispiel
+
+Aufgabe: „CSV-Export für das Rechnungswerkzeug bauen, dokumentieren und die fehlschlagenden Rundungstests beheben.“
+
+| Welle | Agent | Teilaufgabe | Punkte | Modell |
+|---|---|---|---|---|
+| 1 | Geige 1 | Export-Modul mit Tests, nur neue Dateien | 1+0+1+1+1 = 4 | `sonnet` |
+| 1 | Harfe | API-Abschnitt im README | 0+0+1+1+1 = 3 | `haiku` |
+| 1 | Cello | Rundungsfehler im Geld-Code | 1+2+1+2+2 = 8 | `opus` |
+| 2 | Pauke | unabhängige Prüfung der Korrektur | – | `sonnet` |
+
+Cello stellt fest, dass ein Test der schriftlichen Rundungsregel widerspricht, und meldet KLÄRUNG. Der Dirigent entscheidet, dass die Regel gilt, schreibt das in den nächsten Auftrag, und Cello macht fertig. Pauke rechnet die Beträge nach und meldet einen fehlenden Test. Der Dirigent ergänzt ihn, lässt die Tests laufen und berichtet.
+
+Schwache Fassung derselben Arbeit: drei Agenten ohne `model` (alle auf dem Hauptmodell), die Korrektur auf das Wort des Autors hin abgenommen.
 
 ## Stufen
 
@@ -120,16 +141,17 @@ Eine Selbsteinschätzung oder „FERTIG“ ist kein Nachweis. Der Dirigent läss
 | Agent | Teilaufgabe | vorläufig | Selbsteinschätzung | gelaufen auf | Prüfung |
 |---|---|---|---|---|---|
 
-Dazu: Ergebnis, was geprüft wurde und wie, was offen ist.
+Dazu: Ergebnis, was geprüft wurde und wie, was offen ist. Der Bericht endet mit einer Zeile: „Nicht geprüft: …“ (oder „Nicht geprüft: nichts“).
 
-## Häufige Fehler
+## Ausreden und was stattdessen gilt
 
-| Fehler | Richtig |
+| Ausrede | Richtig |
 |---|---|
-| `model` weggelassen | immer setzen |
-| Alles auf dem stärksten Modell, „zur Sicherheit“ | Stufe aus der Punktsumme |
-| Agent per `SendMessage` „hochstufen“ | neuer Agent mit Übergabe |
-| Kleine Aufgabe verteilt | selbst erledigen |
-| Zwei Agenten an derselben Datei | Dateien je Agent trennen oder nacheinander |
-| Prüfer bekommt die Begründung des Autors | nur Ziel, Kriterien, Ergebnis |
-| Dritte Eskalation | Dirigent übernimmt oder fragt |
+| „`model` lasse ich weg, der Standard passt“ | immer setzen; der Standard ist das teure Hauptmodell |
+| „Alles auf Opus, zur Sicherheit“ | Stufe aus der Punktsumme; Sicherheit kommt aus der Prüfung, nicht aus dem Modell |
+| „Ich schreibe dem Agenten, er soll gründlicher denken“ | ein laufender Agent behält sein Modell; neuer Agent mit Übergabe |
+| „Verteilen ist sauberer“ bei drei Aufrufen | selbst erledigen; jeder Agent-Start kostet einen festen Sockel |
+| „Die kommen sich nicht in die Quere“ bei einer Datei | Dateien je Agent trennen oder nacheinander |
+| „Der Prüfer soll wissen, warum der Autor es so gemacht hat“ | nur Ziel, Kriterien, Ergebnis |
+| „Eine Eskalation noch“ (die dritte) | der Teil ist falsch zugeschnitten: neu zerlegen, übernehmen oder fragen |
+| „Der Agent hat FERTIG gemeldet“ | die Prüfung selbst laufen lassen |

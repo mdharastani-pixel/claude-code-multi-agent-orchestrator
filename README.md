@@ -1,6 +1,8 @@
 # Claude Code Multi-Agent Orchestrator (adaptive-multi-agent)
 
-**Save tokens. Maximize results.** A Claude Code skill that turns your main session into a conductor: it splits the task, hands each part to a named subagent, and puts every part on the cheapest model that does it reliably (Haiku, Sonnet, Opus or Fable).
+**Your agents pick their own model, and say so when the job is too big.**
+
+Save tokens, maximize results. A Claude Code skill that turns your main session into a conductor: it splits the task, hands each part to a named subagent, and puts every part on the cheapest model that does it reliably (Haiku, Sonnet, Opus or Fable).
 
 Most multi-agent setups pick the model up front and hope. Here the agents take part in the decision: each one rates its own part first and tells the conductor which model it really needs. Too hard for its model? It changes nothing and hands over. Easier than expected? The next similar part runs one tier lower.
 
@@ -24,6 +26,24 @@ ASSESSMENT: size 1, uncertainty 2, dependencies 1, consequences 2, verification 
 STATUS: ESCALATE
 Goal: ... Findings: billing.py:6 round() on binary floats ... Attempts: none, nothing changed ...
 ```
+
+## Tested
+
+Run with Claude Code 2.1.323, conductor on Fable 5.2, on a small invoice library with planted bugs.
+
+| Case | What happened |
+|---|---|
+| Easy lookup | done directly, no agent started |
+| Medium, two parts | ran in parallel in separate files on `sonnet` and `haiku`; the `sonnet` agent reported that `haiku` would have been enough |
+| Hard, started too low on purpose | `haiku` agent scored 7, changed nothing, returned a handover; restarted on `opus`, all tests green |
+| Independent review | `sonnet` reviewer recomputed 3,000 random invoices, found the math correct and one missing test |
+
+| English brief | `haiku` agent returned `ESCALATE` in the right format and changed nothing |
+| Real use | three named research agents in one wave on `sonnet`, all reported an assessment and finished without escalation |
+
+Testing also found weak spots in the first draft (an agent escalating over bugs outside its part, a missing assessment line). Both are fixed in the brief block. Self-assessments vary by about one point between runs, which is why the check is a separate step.
+
+Reproduce it: see [`tests/`](tests/). A static check runs in CI on every push.
 
 ## Install
 
@@ -75,24 +95,6 @@ Or just say it: "use an agent team for this", "arbeite mit mehreren Agenten".
 ### When it does not save tokens
 
 Every agent start has a fixed cost: it loads the system context and reads in again. For a job of two or three tool calls the conductor is cheaper on its own, and the skill tells it so. Delegation pays off when the work would otherwise fill the main context or can run in parallel.
-
-## Tested
-
-Run with Claude Code 2.1.323, conductor on Fable 5.2, on a small invoice library with planted bugs.
-
-| Case | What happened |
-|---|---|
-| Easy lookup | done directly, no agent started |
-| Medium, two parts | ran in parallel in separate files on `sonnet` and `haiku`; the `sonnet` agent reported that `haiku` would have been enough |
-| Hard, started too low on purpose | `haiku` agent scored 7, changed nothing, returned a handover; restarted on `opus`, all tests green |
-| Independent review | `sonnet` reviewer recomputed 3,000 random invoices, found the math correct and one missing test |
-
-| English brief | `haiku` agent returned `ESCALATE` in the right format and changed nothing |
-| Real use | three named research agents in one wave on `sonnet`, all reported an assessment and finished without escalation |
-
-Testing also found weak spots in the first draft (an agent escalating over bugs outside its part, a missing assessment line). Both are fixed in the brief block. Self-assessments vary by about one point between runs, which is why the check is a separate step.
-
-Reproduce it: see [`tests/`](tests/). A static check runs in CI on every push.
 
 ## Credits
 

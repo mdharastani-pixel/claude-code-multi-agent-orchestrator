@@ -1,6 +1,6 @@
 ---
 name: adaptive-multi-agent
-description: Use when a task has several separable parts, when the user asks for multiple agents, an agent team, parallel work or specialised subagents, when subagents should rate their own difficulty and pick or change their model, or when a subagent reports that its part is harder than expected, keeps failing, needs a stronger model, when any subagent is about to be started, when routine work (reading, searching, counting, executing a finished plan) is about to run in the main session or on the largest model, or when the user wants to save tokens.
+description: Use when a task has several separable parts, when the user asks for multiple agents, an agent team or parallel work, when any subagent is about to be started, when routine work would run on the largest model, when a subagent says its part needs a stronger model, or when the user wants to save tokens.
 ---
 
 # Adaptive Multi-Agent
@@ -10,6 +10,12 @@ Goal: save tokens and maximize results. Every part runs on the cheapest model th
 Like an orchestra: the user talks only to the conductor (main session on Fable 5.2 or Opus 5.5). The conductor splits, assigns, integrates and verifies; the agents play the work. Both agree on the model: the conductor proposes a tier, the agent rates its own part and reports the tier it needs, the conductor applies it. Only the conductor can set a model, and only when starting an agent.
 
 Local rules on model choice or the number of parallel agents (CLAUDE.md, other skills) take precedence. If a file `local.md` lies next to this file, read it first: its rules apply in addition and win.
+
+## Short path
+
+1. Small task (about three tool calls): do it yourself, no agent.
+2. Otherwise: split into parts with separate files, give each agent a name, a `model` and the brief block.
+3. Read each ASSESSMENT, restart only on ESCALATE, verify, report who ran on what.
 
 ## What holds technically (Claude Code, verified with 2.1.323)
 
@@ -31,6 +37,21 @@ The phases always run in this order. None is skipped; a small task just passes t
 7. **Report**: merge results, resolve contradictions yourself, table with agent and model.
 
 Show the user the plan in short form before phase 5 (wave, agent, part, model) and start without asking, unless a step is irreversible.
+
+## Example
+
+Task: "Add CSV export to the invoice tool, document it, and fix the failing rounding tests."
+
+| Wave | Agent | Part | Score | Model |
+|---|---|---|---|---|
+| 1 | Violin 1 | export module with tests, new files only | 1+0+1+1+1 = 4 | `sonnet` |
+| 1 | Harp | API section in the README | 0+0+1+1+1 = 3 | `haiku` |
+| 1 | Cello | rounding bug in money code | 1+2+1+2+2 = 8 | `opus` |
+| 2 | Timpani | independent review of the rounding fix | – | `sonnet` |
+
+Cello finds that one test contradicts the written rounding rule and answers CLARIFY. The conductor decides the rule wins, puts that into the next brief, and Cello finishes. Timpani recomputes the amounts and reports a missing test. The conductor adds it, runs the tests and reports.
+
+Weak version of the same job: three agents without `model` (all on the main model), the bug fix accepted on the author's word.
 
 ## Tiers
 
@@ -120,16 +141,17 @@ A self-assessment or "DONE" is not proof. The conductor runs the tests, reads th
 | Agent | Part | Provisional | Self-assessment | Ran on | Check |
 |---|---|---|---|---|---|
 
-Plus: the result, what was checked and how, what is open.
+Plus: the result, what was checked and how, what is open. The report ends with one line: "Not checked: ..." (or "Not checked: nothing").
 
-## Common mistakes
+## Excuses and what to do instead
 
-| Mistake | Right |
+| Excuse | Right |
 |---|---|
-| `model` left out | always set it |
-| Everything on the strongest model, "to be safe" | tier from the score |
-| "Upgrading" an agent via `SendMessage` | new agent with handover |
-| Small task delegated | do it yourself |
-| Two agents on the same file | separate files per agent, or run in sequence |
-| Reviewer gets the author's reasoning | goal, checks and result only |
-| Third escalation | conductor takes over or asks |
+| "I'll leave `model` out, the default is fine" | always set it; the default is the expensive main model |
+| "Opus for everything, to be safe" | tier from the score; safety comes from the check, not the model |
+| "I'll just message the agent to think harder" | a running agent keeps its model; new agent with handover |
+| "Delegating is cleaner" for a three-call job | do it yourself; every agent start costs a fixed base |
+| "They won't collide" with two agents on one file | separate files per agent, or run in sequence |
+| "The reviewer should know why the author did it" | goal, checks and result only |
+| "One more escalation will do it" (the third) | the part is cut wrong: split it, take over or ask |
+| "The agent said DONE" | run the check yourself |
