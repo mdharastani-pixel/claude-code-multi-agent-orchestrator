@@ -33,6 +33,7 @@ Or just ask for it: "arbeite mit mehreren Agenten", "use an agent team for this"
 | 7-10 | hard | `opus` |
 | `opus` failed, or the core of the whole task | top | `fable` |
 
+- Fixed order of phases, GSD style: state, plan, cast, run in waves, verify, report. Blocking work goes first, the next wave starts only after the previous one is evaluated.
 - Every agent gets an orchestra name by role (Flöte reads, Geige builds, Cello solves the hard core, Pauke reviews), so you can see who plays what.
 - The conductor picks a provisional model. The agent rates its own part first and answers with `EINSCHÄTZUNG` and `STATUS`.
 - If the task needs a stronger model, the agent changes nothing and returns an `ESKALATION` block. The conductor starts a new agent on the stronger model with that block as handover.

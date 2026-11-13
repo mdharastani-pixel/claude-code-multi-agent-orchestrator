@@ -16,15 +16,19 @@ Lokale Regeln zu Modellwahl oder Zahl paralleler Agenten (CLAUDE.md, andere Skil
 - `subagent_type: "fork"` erbt das Hauptmodell, `model` wird ignoriert.
 - Mehrere Agent-Aufrufe in einer Nachricht laufen gleichzeitig.
 
-## Ablauf
+## Ablauf: feste Reihenfolge
 
-1. **Ziel festlegen**: Ergebnis und Prüfkriterien in ein bis drei Sätzen.
-2. **Selbst machen oder verteilen**: Bis etwa drei Werkzeug-Aufrufe, oder wenn der Auftrag länger wäre als die Arbeit: selbst erledigen, kein Agent.
-3. **Zerlegen**: Teilaufgaben mit eigenem Ergebnis und eigenen Dateien. Keine zwei Agenten schreiben in dieselbe Datei. Unabhängige Teile in einer Nachricht starten, abhängige nacheinander. Höchstens vier gleichzeitig.
-4. **Vorläufige Stufe** je Teil aus der Tabelle, `model` immer setzen.
-5. **Auftrag** mit dem Baustein unten.
-6. **Rückmeldung auswerten**: Selbsteinschätzung lesen. `ESKALATION`: neu starten. `KLÄRUNG`: entscheiden oder Nutzer fragen (siehe unten).
-7. **Integrieren und prüfen**, Widersprüche selbst klären, Bericht mit Modell-Tabelle.
+Die Phasen laufen immer in dieser Folge. Keine Phase wird übersprungen, eine kleine Aufgabe durchläuft sie nur kürzer.
+
+1. **Lage**: Ziel und Prüfkriterien in ein bis drei Sätzen. Den echten Stand nachsehen (Dateien, Tests), nicht aus Notizen annehmen.
+2. **Selbst oder verteilen**: Bis etwa drei Werkzeug-Aufrufe, oder wenn der Auftrag länger wäre als die Arbeit: selbst erledigen, kein Agent.
+3. **Plan**: Teilaufgaben mit eigenem Ergebnis und eigenen Dateien, nummeriert und in Wellen geordnet. Zuerst, was andere blockiert (Fehler, fehlende Grundlage), dann der Rest. Keine zwei Agenten schreiben in dieselbe Datei.
+4. **Besetzung**: je Teil Name, vorläufige Stufe aus der Tabelle, `model` immer gesetzt, Auftrag mit dem Baustein unten.
+5. **Ausführen in Wellen**: Alle Teile einer Welle in einer Nachricht starten (höchstens vier gleichzeitig). Die nächste Welle startet erst, wenn die vorige ausgewertet ist: Selbsteinschätzung lesen, `ESKALATION` neu starten, `KLÄRUNG` entscheiden oder Nutzer fragen.
+6. **Prüfen**: Tests, Quellen, bei schweren Teilen unabhängiger Prüfer. Mängel gehen als neue Welle zurück in Phase 5.
+7. **Bericht**: Ergebnisse zusammenführen, Widersprüche selbst klären, Tabelle mit Agent und Modell.
+
+Dem Nutzer vor Phase 5 den Plan in Kurzform zeigen (Welle, Agent, Teilaufgabe, Modell) und ohne Rückfrage starten, außer ein Schritt ist nicht umkehrbar.
 
 ## Stufen
 
