@@ -1,6 +1,6 @@
 ---
 name: adaptive-multi-agent
-description: Use when a task has several separable parts, when the user asks for multiple agents, an agent team, parallel work or specialised subagents, when subagents should rate their own difficulty and pick or change their model, or when a subagent reports that its part is harder than expected, keeps failing, or needs a stronger model.
+description: Use when a task has several separable parts, when the user asks for multiple agents, an agent team, parallel work or specialised subagents, when subagents should rate their own difficulty and pick or change their model, or when a subagent reports that its part is harder than expected, keeps failing, needs a stronger model, when any subagent is about to be started, when routine work (reading, searching, counting, executing a finished plan) is about to run in the main session or on the largest model, or when the user wants to save tokens.
 ---
 
 # Adaptive Multi-Agent
@@ -9,7 +9,7 @@ Goal: save tokens and maximize results. Every part runs on the cheapest model th
 
 Like an orchestra: the user talks only to the conductor (main session on Fable 5.2 or Opus 5.5). The conductor splits, assigns, integrates and verifies; the agents play the work. Both agree on the model: the conductor proposes a tier, the agent rates its own part and reports the tier it needs, the conductor applies it. Only the conductor can set a model, and only when starting an agent.
 
-Local rules on model choice or the number of parallel agents (CLAUDE.md, other skills) take precedence.
+Local rules on model choice or the number of parallel agents (CLAUDE.md, other skills) take precedence. If a file `local.md` lies next to this file, read it first: its rules apply in addition and win.
 
 ## What holds technically (Claude Code, verified with 2.1.323)
 

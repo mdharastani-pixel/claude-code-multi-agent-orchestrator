@@ -37,6 +37,10 @@ Deutsche Fassung: replace `main/SKILL.md` with `main/de/SKILL.md`.
 
 Claude Code picks the skill up in the running session.
 
+## Your own rules
+
+Put a `local.md` next to the installed `SKILL.md` for rules that are yours alone, such as how many agents your machine may run at once. The skill reads it first and it wins. It stays on your machine and survives updates of `SKILL.md`.
+
 ## Use
 
 ```
