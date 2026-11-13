@@ -1,10 +1,29 @@
 # adaptive-multi-agent
 
-**Claude Code skill for multi-agent orchestration with adaptive model routing (Haiku / Sonnet / Opus / Fable) to save tokens.**
+**Save tokens. Maximize results.** A Claude Code skill that turns your main session into a conductor: it splits the task, hands each part to a named subagent, and puts every part on the cheapest model that does it reliably (Haiku, Sonnet, Opus or Fable).
 
-A Claude Code skill. The main session acts as a conductor (built for Claude Fable 5.2 or Opus 5.5): it splits a task, hands the parts to subagents, and agrees the model with each of them. Every subagent rates its own part and reports which model it needs. The conductor starts or restarts agents on the cheapest model that does the job reliably.
+Most multi-agent setups pick the model up front and hope. Here the agents take part in the decision: each one rates its own part first and tells the conductor which model it really needs. Too hard for its model? It changes nothing and hands over. Easier than expected? The next similar part runs one tier lower.
 
-Ein Claude-Code-Skill. Die Hauptsitzung arbeitet als Dirigent (gebaut für Claude Fable 5.2 oder Opus 5.5): Sie zerlegt die Aufgabe, gibt die Teile an Agenten und stimmt mit jedem das Modell ab. Jeder Agent schätzt seine Teilaufgabe selbst ein und meldet, welches Modell er braucht. Das spart Token, weil nur der schwere Teil auf dem teuren Modell läuft.
+One Markdown file. No scripts, no dependencies, no API keys.
+
+## What it looks like
+
+Plan the conductor shows before it starts (from a real test run on a small billing library):
+
+| Wave | Agent | Part | Model |
+|---|---|---|---|
+| 1 | Violin 1 | CSV export module with tests | `sonnet` |
+| 1 | Harp | API section in the README | `haiku` |
+| 1 | Cello | Fix rounding bugs in invoice code | `haiku` → restarted on `opus` |
+| 2 | Timpani | Independent review of the fix | `sonnet` |
+
+What an agent sends back when the part is above its model:
+
+```
+ASSESSMENT: size 1, uncertainty 2, dependencies 1, consequences 2, verification 1 = 7 -> needed: opus; I run on: haiku
+STATUS: ESCALATE
+Goal: ... Findings: billing.py:6 round() on binary floats ... Attempts: none, nothing changed ...
+```
 
 ## Install
 
@@ -14,46 +33,71 @@ curl -fsSL https://raw.githubusercontent.com/mdharastani-pixel/adaptive-multi-ag
   -o ~/.claude/skills/adaptive-multi-agent/SKILL.md
 ```
 
-Claude Code picks it up in the running session. Tested with Claude Code 2.1.323.
+Deutsche Fassung: replace `main/SKILL.md` with `main/de/SKILL.md`.
+
+Claude Code picks the skill up in the running session.
 
 ## Use
 
 ```
-/adaptive-multi-agent Baue den CSV-Export und dokumentiere die API
+/adaptive-multi-agent Build the CSV export and document the API
 ```
 
-Or just ask for it: "arbeite mit mehreren Agenten", "use an agent team for this".
+Or just say it: "use an agent team for this", "arbeite mit mehreren Agenten".
 
 ## How it works
 
-| Score (5 criteria, 0-2 each) | Tier | `model` |
+**1. Fixed order, GSD style.** State → do it or delegate → plan → cast → run in waves → verify → report. Blocking work goes first. The next wave starts only after the previous one is evaluated. Small tasks are done directly, without any agent.
+
+**2. Agents rate their own part.** Five criteria, 0-2 points each: size and complexity, uncertainty, dependencies, consequences of an error, verification needed.
+
+| Score | Tier | `model` |
 |---|---|---|
 | 0-3 | easy | `haiku` |
 | 4-6 | medium | `sonnet` |
 | 7-10 | hard | `opus` |
 | `opus` failed, or the core of the whole task | top | `fable` |
 
-- Fixed order of phases, GSD style: state, plan, cast, run in waves, verify, report. Blocking work goes first, the next wave starts only after the previous one is evaluated.
-- Every agent gets an orchestra name by role (Flöte reads, Geige builds, Cello solves the hard core, Pauke reviews), so you can see who plays what.
-- The conductor picks a provisional model. The agent rates its own part first and answers with `EINSCHÄTZUNG` and `STATUS`.
-- If the task needs a stronger model, the agent changes nothing and returns an `ESKALATION` block. The conductor starts a new agent on the stronger model with that block as handover.
-- If two requirements contradict each other, the agent returns `KLÄRUNG`. That needs a decision, not a bigger model.
-- Results are checked with tests or sources. Hard or risky parts get an independent reviewer agent.
+**3. Three possible answers.** `DONE` with evidence. `ESCALATE` with a handover block, so the stronger agent does not read everything again. `CLARIFY` when two requirements contradict each other, because that needs a decision and not a bigger model.
 
-## Keywords
+**4. Names.** Flute reads, Clarinet researches, Violin builds, Harp writes, Cello solves the hard core, Timpani reviews. You always see who plays what, and on which model.
 
-Claude Code skill, SKILL.md, agent skills, subagents, multi-agent orchestration, orchestrator and workers, model routing, model selection, Haiku, Sonnet, Opus, Fable, escalation, handover, token saving, cost optimization.
+**5. Nothing is done without a check.** The conductor runs the tests itself. Hard or risky parts get an independent reviewer that sees the result but not the author's reasoning.
+
+**6. Token rules.** The conductor does not read what an agent can read. Briefs name paths instead of pasting contents. Restarts happen only on escalation, never to downgrade. At most two escalations per part.
+
+## Tested
+
+Run with Claude Code 2.1.323, conductor on Fable 5.2, on a small invoice library with planted bugs.
+
+| Case | What happened |
+|---|---|
+| Easy lookup | done directly, no agent started |
+| Medium, two parts | ran in parallel in separate files on `sonnet` and `haiku`; the `sonnet` agent reported that `haiku` would have been enough |
+| Hard, started too low on purpose | `haiku` agent scored 7, changed nothing, returned a handover; restarted on `opus`, all tests green |
+| Independent review | `sonnet` reviewer recomputed 3,000 random invoices, found the math correct and one missing test |
+
+Testing also found weak spots in the first draft (an agent escalating over bugs outside its part, a missing assessment line). Both are fixed in the brief block. The orchestra names and the fixed phase order were added after these runs.
 
 ## Limits
 
 - A running subagent cannot change its own model. "Switching" always means a new agent with a handover.
 - `SendMessage` continues an agent on the same model.
 - `subagent_type: "fork"` inherits the main model and ignores `model`.
-- The skill text is German. Claude follows it in any language.
+- Only Claude models. The skill does not call other providers.
+- The self-assessment is a signal, not proof. That is why the check is a separate step.
 
 ## Safety
 
-The skill is one Markdown file with instructions. It has no scripts, no network calls, no credentials and no file paths from the author's machine. Installing it gives nobody access to your data, and publishing it gives nobody access to the author's.
+The skill is plain instructions in one Markdown file. No scripts, no network calls, no credentials, no telemetry. Read it before you install it; it takes two minutes.
+
+## Keywords
+
+Claude Code skill, SKILL.md, agent skills, subagents, multi-agent orchestration, orchestrator and workers, conductor, model routing, model selection, Haiku, Sonnet, Opus, Fable, escalation, handover, token saving, cost optimization, GSD workflow.
+
+## Deutsch
+
+Ein Skill für Claude Code. Du sprichst nur mit dem Dirigenten (Fable 5.2 oder Opus 5.5). Er zerlegt die Aufgabe, gibt jedem Agenten einen Namen und stimmt mit ihm das Modell ab: Jeder Agent schätzt seine Teilaufgabe selbst ein und meldet, welches Modell er braucht. So läuft nur der schwere Teil auf dem teuren Modell. Die deutsche Fassung liegt in [`de/SKILL.md`](de/SKILL.md).
 
 ## License
 
