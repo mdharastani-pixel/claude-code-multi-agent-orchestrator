@@ -1,10 +1,10 @@
 # Claude Code Multi-Agent Orchestrator (adaptive-multi-agent)
 
-**Your agents pick their own model, and say so when the job is too big.**
+**Your agents pick their own model and effort, and say so when the job is too big.**
 
-Save tokens, maximize results. A Claude Code skill that turns your main session into a conductor: it splits the task, hands each part to a named subagent, and puts every part on the cheapest model that does it reliably (Haiku, Sonnet, Opus or Fable).
+Save tokens, maximize results. A Claude Code skill that turns your main session into a conductor: it splits the task, hands each part to a named subagent, and puts every part on the cheapest model that does it reliably (Haiku, Sonnet, Opus or Fable) at the effort level it needs (`low` to `max`).
 
-Most multi-agent setups pick the model up front and hope. Here the agents take part in the decision: each one rates its own part first and tells the conductor which model it really needs. Too hard for its model? It changes nothing and hands over. Easier than expected? The next similar part runs one tier lower.
+Most multi-agent setups pick the model up front and hope. Here the agents take part in the decision: each one rates its own part first and tells the conductor which model and how much thinking it really needs. Too hard for its model? It changes nothing and hands over. Easier than expected? The next similar part runs one tier lower.
 
 One Markdown file. No scripts, no dependencies, no API keys.
 
@@ -40,6 +40,7 @@ Run with Claude Code 2.1.323, conductor on Fable 5.2, on a small invoice library
 
 | English brief | `haiku` agent returned `ESCALATE` in the right format and changed nothing |
 | Real use | three named research agents in one wave on `sonnet`, all reported an assessment and finished without escalation |
+| Effort and Fable rules (2.1.330) | fresh `sonnet` conductor on four trap cases: "very important" README edit done directly, no `fable`; payment race that `opus` failed twice on went to `fable` at `xhigh` with a reviewer; a capable `sonnet` agent that missed a named case at `low` was restarted on `sonnet` one effort step up, not on a bigger model |
 
 Testing also found weak spots in the first draft (an agent escalating over bugs outside its part, a missing assessment line). Both are fixed in the brief block. Self-assessments vary by about one point between runs, which is why the check is a separate step.
 
@@ -82,9 +83,13 @@ Or just say it: "use an agent team for this", "arbeite mit mehreren Agenten".
 | 7-10 | hard | `opus` |
 | `opus` failed, or the core of the whole task | top | `fable` |
 
+`fable` runs without asking only when the part really needs it: `opus` failed on it, or it is the core everything depends on with a score of 9-10 and high consequences.
+
+Effort is a second lever, from size + uncertainty + verification (0-6): 0-1 `low`, 2-3 `medium`, 4-5 `high`, 6 `xhigh`, `max` only on the last escalation step. A capable model that worked too shallowly is restarted one effort step higher before anyone reaches for a bigger model.
+
 **3. Three possible answers.** `DONE` with evidence. `ESCALATE` with a handover block, so the stronger agent does not read everything again. `CLARIFY` when two requirements contradict each other, because that needs a decision and not a bigger model.
 
-**4. Names.** Flute reads, Clarinet researches, Violin builds, Harp writes, Cello solves the hard core, Timpani reviews. You always see who plays what, and on which model.
+**4. Names.** Flute reads, Clarinet researches, Violin builds, Harp writes, Cello solves the hard core, Timpani reviews. You always see who plays what, on which model and at which effort.
 
 **5. Nothing is done without a check.** The conductor runs the tests itself. Hard or risky parts get an independent reviewer that sees the result but not the author's reasoning.
 
@@ -98,15 +103,15 @@ Every agent start has a fixed cost: it loads the system context and reads in aga
 
 ## Credits
 
-Several rules were sharpened after reading how other projects handle the same problem: [AqueGen/model-routing](https://github.com/AqueGen/model-routing) (handover with "what was tried and why it failed", finished agents take no new task), [dsifry/metaswarm](https://github.com/dsifry/metaswarm) (clarify is a stop, not an escalation; file scope check), [ahnafthaqeef/orchestrate-claude-skill](https://github.com/ahnafthaqeef/orchestrate-claude-skill) (fallback when a model is unavailable, ask before the most expensive tier), [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) and [Ibrahim-3d/orchestrator-supaconductor](https://github.com/Ibrahim-3d/orchestrator-supaconductor) (state file for long tasks). What none of them has, as far as their core files show: the agent itself rates its part and reports the model it needs.
+Several rules were sharpened after reading how other projects handle the same problem: [AqueGen/model-routing](https://github.com/AqueGen/model-routing) (handover with "what was tried and why it failed", finished agents take no new task), [dsifry/metaswarm](https://github.com/dsifry/metaswarm) (clarify is a stop, not an escalation; file scope check), [ahnafthaqeef/orchestrate-claude-skill](https://github.com/ahnafthaqeef/orchestrate-claude-skill) (fallback when a model is unavailable), [jessepwj/CCteam-creator](https://github.com/jessepwj/CCteam-creator) and [Ibrahim-3d/orchestrator-supaconductor](https://github.com/Ibrahim-3d/orchestrator-supaconductor) (state file for long tasks). What none of them has, as far as their core files show: the agent itself rates its part and reports the model it needs.
 
 ## Limits
 
-- A running subagent cannot change its own model. "Switching" always means a new agent with a handover.
+- A running subagent cannot change its own model or effort. "Switching" always means a new agent with a handover.
 - `SendMessage` continues an agent on the same model.
-- `subagent_type: "fork"` inherits the main model and ignores `model`.
+- `subagent_type: "fork"` inherits the main model and effort and ignores `model` and `effort`.
 - Only Claude models. The skill does not call other providers.
-- Nothing is enforced by hooks. The rules are instructions; the one hard lever is the `model` value in the agent call.
+- Nothing is enforced by hooks. The rules are instructions; the hard levers are the `model` and `effort` values in the agent call.
 - The self-assessment is a signal, not proof. That is why the check is a separate step.
 
 ## Safety
@@ -115,11 +120,11 @@ The skill you install is plain instructions in one Markdown file. No scripts, no
 
 ## Keywords
 
-Claude Code skill, SKILL.md, agent skills, subagents, multi-agent orchestration, orchestrator and workers, conductor, model routing, model selection, Haiku, Sonnet, Opus, Fable, escalation, handover, token saving, cost optimization, GSD workflow.
+Claude Code skill, SKILL.md, agent skills, subagents, multi-agent orchestration, orchestrator and workers, conductor, model routing, model selection, reasoning effort, effort level, thinking budget, Haiku, Sonnet, Opus, Fable, escalation, handover, token saving, cost optimization, GSD workflow.
 
 ## Deutsch
 
-Ein Skill für Claude Code. Du sprichst nur mit dem Dirigenten (Fable 5.2 oder Opus 5.5). Er zerlegt die Aufgabe, gibt jedem Agenten einen Namen und stimmt mit ihm das Modell ab: Jeder Agent schätzt seine Teilaufgabe selbst ein und meldet, welches Modell er braucht. So läuft nur der schwere Teil auf dem teuren Modell. Die deutsche Fassung liegt in [`de/SKILL.md`](de/SKILL.md).
+Ein Skill für Claude Code. Du sprichst nur mit dem Dirigenten (Fable 5.2 oder Opus 5.5). Er zerlegt die Aufgabe, gibt jedem Agenten einen Namen und stimmt mit ihm das Modell ab: Jeder Agent schätzt seine Teilaufgabe selbst ein und meldet, welches Modell und welchen Aufwand (`low` bis `max`) er braucht. So läuft nur der schwere Teil auf dem teuren Modell. Die deutsche Fassung liegt in [`de/SKILL.md`](de/SKILL.md).
 
 ## License
 

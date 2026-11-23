@@ -5,9 +5,9 @@ root = pathlib.Path(__file__).resolve().parent.parent
 errors = []
 
 REQUIRED = {
-    "SKILL.md": ["ASSESSMENT:", "STATUS: DONE | ESCALATE | CLARIFY", "You cannot change it yourself",
+    "SKILL.md": ["ASSESSMENT:", "STATUS: DONE | ESCALATE | CLARIFY", "You cannot change them yourself", "Effort from criteria 1+2+5",
                  "`haiku`", "`sonnet`", "`opus`", "`fable`", "At most two escalations", ".orchestra/"],
-    "de/SKILL.md": ["EINSCHÄTZUNG:", "STATUS: FERTIG | ESKALATION | KLÄRUNG", "Du kannst es nicht selbst wechseln",
+    "de/SKILL.md": ["EINSCHÄTZUNG:", "STATUS: FERTIG | ESKALATION | KLÄRUNG", "Du kannst beides nicht selbst wechseln", "Aufwand aus Kriterium 1+2+5",
                     "`haiku`", "`sonnet`", "`opus`", "`fable`", "Höchstens zwei Eskalationen", ".orchestra/"],
 }
 headings = {}
